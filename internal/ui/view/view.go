@@ -11,6 +11,7 @@ import (
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
+	"miniflux.app/v2/internal/reader/comments"
 	"miniflux.app/v2/internal/reader/prefetch"
 	"miniflux.app/v2/internal/template"
 	"miniflux.app/v2/internal/ui/static"
@@ -54,16 +55,17 @@ func newView(tpl *template.Engine, r *http.Request) *view {
 	webSession := request.WebSession(r)
 	theme := webSession.Theme()
 	return &view{tpl, r, map[string]any{
-		"menu":            "",
-		"theme":           theme,
-		"language":        webSession.Language(),
-		"theme_checksum":  static.StylesheetBundles[theme+".css"].Checksum,
-		"app_js_checksum": static.JavascriptBundles["app.js"].Checksum,
-		"sw_js_checksum":  static.JavascriptBundles["service-worker.js"].Checksum,
-		"webAuthnEnabled": config.Opts.WebAuthn(),
-		"suggestedFeeds":  SuggestedFeeds(),
-		"fetchState":      prefetch.State,
-		"forceCrawler":    config.Opts.ForceCrawler(),
+		"menu":              "",
+		"theme":             theme,
+		"language":          webSession.Language(),
+		"theme_checksum":    static.StylesheetBundles[theme+".css"].Checksum,
+		"app_js_checksum":   static.JavascriptBundles["app.js"].Checksum,
+		"sw_js_checksum":    static.JavascriptBundles["service-worker.js"].Checksum,
+		"webAuthnEnabled":   config.Opts.WebAuthn(),
+		"suggestedFeeds":    SuggestedFeeds(),
+		"fetchState":        prefetch.State,
+		"forceCrawler":      config.Opts.ForceCrawler(),
+		"commentsSupported": comments.Supported,
 	}}
 }
 
