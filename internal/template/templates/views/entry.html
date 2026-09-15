@@ -287,6 +287,17 @@
         {{ safeHTML .entry.Content }}
     {{ end }}
 </article>
+
+<div class="entry-archive-link" style="margin-top: 1rem; font-weight: bold; padding: 1rem; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; display: flex; justify-content: space-between;">
+    <div>
+        {{ icon "external-link" }} 🔓 Paywall Bypass:
+        <a href="https://archive.ph/newest/{{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Archive.ph</a> •
+        <a href="https://archive.is/newest/{{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Archive.is</a> •
+        <a href="https://txtify.it/replace?url={{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Txtify.it</a> •
+        <a href="https://web.archive.org/web/2/{{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Wayback</a>
+    </div>
+    <a href="https://buymeacoffee.com/savepanflo" target="_blank" rel="noopener" style="color: #BD5FFF;">{{ icon "star" }} Save Panflo</a>
+</div>
 {{ if .entry.Enclosures }}
 <details class="entry-enclosures">
     <summary>{{ t "page.entry.attachments" }} ({{ len .entry.Enclosures }})</summary>
