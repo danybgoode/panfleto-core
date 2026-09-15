@@ -616,6 +616,61 @@ func NewConfigOptions() *configOptions {
 				rawValue:          "https://www.youtube-nocookie.com/embed/",
 				valueType:         stringType,
 			},
+			// panfleto: article autofetch. Every default below is upstream Miniflux's behaviour, so the
+			// feature is off unless deploy/docker-compose.yml turns it on - and deploy/.env turns it off.
+			"FORCE_CRAWLER": {
+				parsedBoolValue: false,
+				rawValue:        "0",
+				valueType:       boolType,
+			},
+			"FETCH_FALLBACK_CHAIN": {
+				parsedStringList: []string{},
+				rawValue:         "",
+				valueType:        stringListType,
+				validator: func(rawValue string) error {
+					return validateListChoices(parseStringListValue(rawValue, nil), []string{"unwall"})
+				},
+			},
+			"FETCH_THIN_CONTENT_THRESHOLD": {
+				parsedIntValue: 2000,
+				rawValue:       "2000",
+				valueType:      intType,
+				validator: func(rawValue string) error {
+					return validateGreaterOrEqualThan(rawValue, 1)
+				},
+			},
+			"PREFETCH_WORKERS": {
+				parsedIntValue: 0,
+				rawValue:       "0",
+				valueType:      intType,
+				validator: func(rawValue string) error {
+					return validateRange(rawValue, 0, 16)
+				},
+			},
+			"PREFETCH_QUEUE_SIZE": {
+				parsedIntValue: 1000,
+				rawValue:       "1000",
+				valueType:      intType,
+				validator: func(rawValue string) error {
+					return validateGreaterOrEqualThan(rawValue, 1)
+				},
+			},
+			"PREFETCH_HOST_DELAY": {
+				parsedDuration: 2 * time.Second,
+				rawValue:       "2",
+				valueType:      secondType,
+				validator: func(rawValue string) error {
+					return validateGreaterOrEqualThan(rawValue, 0)
+				},
+			},
+			"PREFETCH_RECOVERY_WINDOW": {
+				parsedDuration: 6 * time.Hour,
+				rawValue:       "6",
+				valueType:      hourType,
+				validator: func(rawValue string) error {
+					return validateGreaterOrEqualThan(rawValue, 0)
+				},
+			},
 		},
 	}
 }
@@ -1041,4 +1096,34 @@ func (c *configOptions) String() string {
 	}
 
 	return builder.String()
+}
+
+// panfleto: article autofetch.
+
+func (c *configOptions) ForceCrawler() bool {
+	return c.options["FORCE_CRAWLER"].parsedBoolValue
+}
+
+func (c *configOptions) FetchFallbackChain() []string {
+	return c.options["FETCH_FALLBACK_CHAIN"].parsedStringList
+}
+
+func (c *configOptions) FetchThinContentThreshold() int {
+	return c.options["FETCH_THIN_CONTENT_THRESHOLD"].parsedIntValue
+}
+
+func (c *configOptions) PrefetchWorkers() int {
+	return c.options["PREFETCH_WORKERS"].parsedIntValue
+}
+
+func (c *configOptions) PrefetchQueueSize() int {
+	return c.options["PREFETCH_QUEUE_SIZE"].parsedIntValue
+}
+
+func (c *configOptions) PrefetchHostDelay() time.Duration {
+	return c.options["PREFETCH_HOST_DELAY"].parsedDuration
+}
+
+func (c *configOptions) PrefetchRecoveryWindow() time.Duration {
+	return c.options["PREFETCH_RECOVERY_WINDOW"].parsedDuration
 }
