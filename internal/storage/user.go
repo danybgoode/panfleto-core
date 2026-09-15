@@ -65,9 +65,9 @@ func (s *Storage) CreateUser(userCreationRequest *model.UserCreationRequest) (*m
 
 	query := `
 		INSERT INTO users
-			(username, password, is_admin, google_id, openid_connect_id)
+			(username, password, is_admin, google_id, openid_connect_id, entry_direction, default_home_page)
 		VALUES
-			(LOWER($1), $2, $3, $4, $5)
+			(LOWER($1), $2, $3, $4, $5, 'desc', 'feeds')
 		RETURNING
 			id,
 			username,
