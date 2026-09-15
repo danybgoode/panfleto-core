@@ -147,10 +147,30 @@ func (h *handler) showIntegrationPage(w http.ResponseWriter, r *http.Request) {
 		ArchiveorgEnabled:                integration.ArchiveorgEnabled,
 	}
 
+	// --- PANFLETO MCP TOKEN INJECTION ---
+	apiKeys, err := h.store.APIKeys(user.ID)
+	var mcpToken string
+	if err == nil {
+		for _, key := range apiKeys {
+			if key.Description == "Panfleto MCP" {
+				mcpToken = key.Token
+				break
+			}
+		}
+	}
+	if mcpToken == "" {
+		newKey, err := h.store.CreateAPIKey(user.ID, "Panfleto MCP")
+		if err == nil {
+			mcpToken = newKey.Token
+		}
+	}
+	// ------------------------------------
+
 	view := view.New(h.tpl, r)
 	view.Set("form", integrationForm)
 	view.Set("menu", "settings")
 	view.Set("user", user)
+	view.Set("mcpToken", mcpToken) // Expose to template
 	navMetadata, _ := h.store.GetNavMetadata(user.ID)
 	view.Set("countUnread", navMetadata.CountUnread)
 	view.Set("countErrorFeeds", navMetadata.CountErrorFeeds)
