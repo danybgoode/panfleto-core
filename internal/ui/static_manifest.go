@@ -78,8 +78,8 @@ func (h *handler) showWebManifest(w http.ResponseWriter, r *http.Request) {
 	}
 	themeColor := model.ThemeColor(request.WebSession(r).Theme(), "light")
 	manifest := &webManifest{
-		Name:            "Miniflux",
-		ShortName:       "Miniflux",
+		Name:            "panfleto",
+		ShortName:       "panfleto",
 		Description:     "Minimalist Feed Reader",
 		Display:         displayMode,
 		StartURL:        h.routePath("/"),
