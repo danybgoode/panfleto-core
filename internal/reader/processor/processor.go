@@ -13,12 +13,12 @@ import (
 	"miniflux.app/v2/internal/metric"
 	"miniflux.app/v2/internal/model"
 	"miniflux.app/v2/internal/proxyrotator"
+	"miniflux.app/v2/internal/reader/autofetch"
 	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/filter"
 	"miniflux.app/v2/internal/reader/readingtime"
 	"miniflux.app/v2/internal/reader/rewrite"
 	"miniflux.app/v2/internal/reader/sanitizer"
-	"miniflux.app/v2/internal/reader/scraper"
 	"miniflux.app/v2/internal/reader/urlcleaner"
 	"miniflux.app/v2/internal/storage"
 )
@@ -94,7 +94,8 @@ func ProcessFeedEntries(store *storage.Storage, feed *model.Feed, userID int64, 
 		entry.URL = rewrite.RewriteEntryURL(feed, entry)
 		entryIsNew := store.IsNewEntry(feed.ID, entry.Hash)
 		contentExtractedSuccessfully := false
-		if feed.Crawler && (entryIsNew || forceRefresh) {
+		// panfleto: with the prefetcher on, new entries are scraped off the poll path (article-autofetch D2).
+		if feed.Crawler && (entryIsNew || forceRefresh) && config.Opts.PrefetchWorkers() == 0 {
 			slog.Debug("Scraping entry",
 				slog.Int64("user_id", user.ID),
 				slog.String("entry_url", entry.URL),
@@ -108,10 +109,10 @@ func ProcessFeedEntries(store *storage.Storage, feed *model.Feed, userID int64, 
 
 			startTime := time.Now()
 
-			scrapedPageBaseURL, extractedContent, scraperErr := scraper.ScrapeWebsite(
+			scrapedPageBaseURL, extractedContent, scraperErr := autofetch.Fetch(
 				requestBuilder,
+				feed,
 				entry.URL,
-				feed.ScraperRules,
 			)
 
 			if scrapedPageBaseURL != "" {
@@ -192,10 +193,10 @@ func ProcessEntryWebPage(feed *model.Feed, entry *model.Entry, user *model.User)
 		IgnoreTLSErrors(feed.AllowSelfSignedCertificates).
 		DisableHTTP2(feed.DisableHTTP2)
 
-	webpageBaseURL, extractedContent, scraperErr := scraper.ScrapeWebsite(
+	webpageBaseURL, extractedContent, scraperErr := autofetch.Fetch(
 		requestBuilder,
+		feed,
 		entry.URL,
-		feed.ScraperRules,
 	)
 
 	if config.Opts.HasMetricsCollector() {

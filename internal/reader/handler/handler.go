@@ -17,6 +17,7 @@ import (
 	"miniflux.app/v2/internal/reader/fetcher"
 	"miniflux.app/v2/internal/reader/icon"
 	"miniflux.app/v2/internal/reader/parser"
+	"miniflux.app/v2/internal/reader/prefetch"
 	"miniflux.app/v2/internal/reader/processor"
 	"miniflux.app/v2/internal/storage"
 )
@@ -66,7 +67,7 @@ func CreateFeedFromSubscriptionDiscovery(store *storage.Storage, userID int64, f
 	subscription.Cookie = feedCreationRequest.Cookie
 	subscription.Username = feedCreationRequest.Username
 	subscription.Password = feedCreationRequest.Password
-	subscription.Crawler = feedCreationRequest.Crawler
+	subscription.Crawler = feedCreationRequest.Crawler || config.Opts.ForceCrawler() // panfleto: FORCE_CRAWLER (article-autofetch D6)
 	subscription.IgnoreEntryUpdates = feedCreationRequest.IgnoreEntryUpdates
 	subscription.Disabled = feedCreationRequest.Disabled
 	subscription.IgnoreHTTPCache = feedCreationRequest.IgnoreHTTPCache
@@ -92,6 +93,7 @@ func CreateFeedFromSubscriptionDiscovery(store *storage.Storage, userID int64, f
 	if storeErr := store.CreateFeed(subscription); storeErr != nil {
 		return nil, locale.NewLocalizedErrorWrapper(storeErr, "error.database_error", storeErr)
 	}
+	prefetch.Enqueue(subscription, subscription.Entries)
 
 	slog.Debug("Created feed",
 		slog.Int64("user_id", userID),
@@ -160,7 +162,7 @@ func CreateFeed(store *storage.Storage, userID int64, feedCreationRequest *model
 	subscription.Cookie = feedCreationRequest.Cookie
 	subscription.Username = feedCreationRequest.Username
 	subscription.Password = feedCreationRequest.Password
-	subscription.Crawler = feedCreationRequest.Crawler
+	subscription.Crawler = feedCreationRequest.Crawler || config.Opts.ForceCrawler() // panfleto: FORCE_CRAWLER (article-autofetch D6)
 	subscription.IgnoreEntryUpdates = feedCreationRequest.IgnoreEntryUpdates
 	subscription.Disabled = feedCreationRequest.Disabled
 	subscription.IgnoreHTTPCache = feedCreationRequest.IgnoreHTTPCache
@@ -188,6 +190,7 @@ func CreateFeed(store *storage.Storage, userID int64, feedCreationRequest *model
 	if storeErr := store.CreateFeed(subscription); storeErr != nil {
 		return nil, locale.NewLocalizedErrorWrapper(storeErr, "error.database_error", storeErr)
 	}
+	prefetch.Enqueue(subscription, subscription.Entries)
 
 	slog.Debug("Created feed",
 		slog.Int64("user_id", userID),
@@ -335,6 +338,7 @@ func RefreshFeed(store *storage.Storage, userID, feedID int64, forceRefresh bool
 			localizedError := locale.NewLocalizedErrorWrapper(storeErr, "error.database_error", storeErr)
 			return getTranslatedLocalizedError(store, userID, originalFeed, localizedError)
 		}
+		prefetch.EnqueueRefreshed(originalFeed, originalFeed.Entries, newEntries, forceRefresh)
 
 		userIntegrations, intErr := store.Integration(userID)
 		if intErr != nil {

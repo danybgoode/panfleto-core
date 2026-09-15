@@ -15,6 +15,7 @@ import (
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/server"
 	"miniflux.app/v2/internal/metric"
+	"miniflux.app/v2/internal/reader/prefetch"
 	"miniflux.app/v2/internal/storage"
 	"miniflux.app/v2/internal/systemd"
 	"miniflux.app/v2/internal/worker"
@@ -31,6 +32,7 @@ func startDaemon(store *storage.Storage) {
 	signal.Notify(reload, syscall.SIGHUP)
 
 	pool := worker.NewPool(store, config.Opts.WorkerPoolSize())
+	prefetch.Start(store) // panfleto: article autofetch, a no-op unless PREFETCH_WORKERS > 0
 
 	if config.Opts.HasSchedulerService() && !config.Opts.HasMaintenanceMode() {
 		runScheduler(store, pool)
