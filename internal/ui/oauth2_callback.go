@@ -135,6 +135,8 @@ func (h *handler) oauth2Callback(w http.ResponseWriter, r *http.Request) {
 			response.HTMLServerError(w, r, err)
 			return
 		}
+
+		go provisionUserOnboarding(h.store, user.ID, user.Username)
 	}
 
 	slog.Info("User authenticated successfully using OAuth2",
