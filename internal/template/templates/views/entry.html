@@ -315,6 +315,14 @@
     </div>
     <a href="https://buymeacoffee.com/savepanflo" target="_blank" rel="noopener" style="color: #BD5FFF;">{{ icon "star" }} Save Panflo</a>
 </div>
+{{/* panfleto: inline comments. Signed-in readers only, supported sources only (inline-comments D5); the body
+     is fetched on first expand, so an entry without a thread costs nothing. */}}
+{{ if and .user .entry.CommentsURL .commentsSupported }}{{ if call .commentsSupported .entry.CommentsURL }}
+<details class="entry-enclosures" data-comments-url="{{ routePath "/entry/%d/comments" .entry.ID }}">
+    <summary>{{ t "entry.comments.label" }}</summary>
+    <div data-comments-panel="true"><p>{{ t "entry.state.loading" }}</p></div>
+</details>
+{{ end }}{{ end }}
 {{ if .entry.Enclosures }}
 <details class="entry-enclosures">
     <summary>{{ t "page.entry.attachments" }} ({{ len .entry.Enclosures }})</summary>
