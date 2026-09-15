@@ -11,6 +11,7 @@ import (
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
+	"miniflux.app/v2/internal/reader/comments"
 	"miniflux.app/v2/internal/reader/prefetch"
 	"miniflux.app/v2/internal/template"
 	"miniflux.app/v2/internal/ui/static"
@@ -53,6 +54,7 @@ func New(tpl *template.Engine, r *http.Request) *view {
 		"suggestedFeeds":      SuggestedFeeds(),
 		"fetchState":          prefetch.State,
 		"forceCrawler":        config.Opts.ForceCrawler(),
+		"commentsSupported":   comments.Supported,
 	}}
 }
 
