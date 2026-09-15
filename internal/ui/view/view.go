@@ -4,7 +4,10 @@
 package view // import "miniflux.app/v2/internal/ui/view"
 
 import (
+	"encoding/json"
+	"log/slog"
 	"net/http"
+	"sync"
 
 	"miniflux.app/v2/internal/config"
 	"miniflux.app/v2/internal/http/request"
@@ -47,4 +50,26 @@ func New(tpl *template.Engine, r *http.Request) *view {
 		"sw_js_checksum":      static.JavascriptBundles["service-worker.js"].Checksum,
 		"webAuthnEnabled":     config.Opts.WebAuthn(),
 	}}
+}
+
+// SuggestedFeed is one entry of panfleto's feeds.json (internal/ui/static/bin/feeds.json): the single
+// list behind the subscribe page's suggestions, new-account starter feeds, and the landing page signup.
+type SuggestedFeed struct {
+	URL      string `json:"url"`
+	Title    string `json:"title"`
+	Category string `json:"category"`
+	Starter  bool   `json:"starter"`
+}
+
+var suggestedFeeds = sync.OnceValue(func() []SuggestedFeed {
+	var feeds []SuggestedFeed
+	if err := json.Unmarshal(static.BinaryBundles["feeds.json"].Data, &feeds); err != nil {
+		slog.Error("Unable to parse feeds.json", slog.Any("error", err))
+	}
+	return feeds
+})
+
+// SuggestedFeeds returns the parsed feeds.json.
+func SuggestedFeeds() []SuggestedFeed {
+	return suggestedFeeds()
 }
