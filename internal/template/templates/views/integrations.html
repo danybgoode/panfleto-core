@@ -7,7 +7,66 @@
 </section>
 {{ end }}
 
+{{ define "mcp_panel" }}
+<details open>
+    <summary>Panfleto AI Assistant (MCP)</summary>
+    <div class="form-section">
+        <p>Connect your Panfleto account to any MCP-compatible AI client (like Claude, Cursor, or Continue) to get daily digests, manage feeds, and search articles directly from chat.</p>
+
+        {{ if .mcpKeyExists }}
+        <table>
+            <tr>
+                <th class="column-25">Created</th>
+                <td><time datetime="{{ isodate .mcpCreatedAt }}" title="{{ isodate .mcpCreatedAt }}">{{ elapsed .user.Timezone .mcpCreatedAt }}</time></td>
+            </tr>
+            <tr>
+                <th>Last used</th>
+                <td>
+                    {{ if .mcpLastUsedAt }}
+                        <time datetime="{{ isodate .mcpLastUsedAt }}" title="{{ isodate .mcpLastUsedAt }}">{{ elapsed .user.Timezone .mcpLastUsedAt }}</time>
+                    {{ else }}
+                        Never used
+                    {{ end }}
+                </td>
+            </tr>
+        </table>
+
+        {{ if .mcpToken }}
+        <p class="hint">This URL contains a credential. Anyone who has it can read and change your feeds. It is shown only on this page load — reload and it is hidden again.</p>
+        <label for="mcp-url">Your MCP URL</label>
+        <input type="text" id="mcp-url" value="https://panfleto.win/api/mcp?token={{ .mcpToken }}" readonly spellcheck="false">
+        <p><strong>Recommended where your client supports it</strong> (Cursor, Continue, Claude Code): send the token as a header instead, to <code>https://panfleto.win/api/mcp</code> — <code>Authorization: Bearer &lt;your token&gt;</code>. A URL is logged by proxies and kept in browser history; a header is not.</p>
+        <p><strong>Claude Users:</strong> <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener noreferrer">Click here to add the connector</a>, then paste your MCP URL above. claude.ai's custom connectors cannot reliably send request headers yet, so the URL form is the one to use there — it is fully supported and is not going away.</p>
+        {{ else }}
+        <form method="post" action="{{ routePath "/integration/mcp/reveal" }}">
+            <input type="hidden" name="csrf" value="{{ .csrf }}">
+            <button type="submit" class="button" data-label-loading="Showing…">Show my MCP URL</button>
+        </form>
+        <p class="hint">Your token is not written into this page unless you ask for it.</p>
+        {{ end }}
+
+        <details>
+            <summary>Replace my token</summary>
+            <p class="hint">Rotating issues a new token and <strong>revokes the current one immediately</strong>. Every assistant configured with the old URL will stop working until you paste the new one in. Do this if you think the token has leaked.</p>
+            <form method="post" action="{{ routePath "/integration/mcp/rotate" }}">
+                <input type="hidden" name="csrf" value="{{ .csrf }}">
+                <button type="submit" class="button button-danger" data-label-loading="Rotating…">Rotate now — my current connector will stop working</button>
+            </form>
+        </details>
+        {{ else }}
+        <p class="hint">You do not have an MCP token. Generating one creates a long-lived credential on your account, so panfleto no longer creates it just because you opened this page.</p>
+        <form method="post" action="{{ routePath "/integration/mcp/generate" }}">
+            <input type="hidden" name="csrf" value="{{ .csrf }}">
+            <button type="submit" class="button button-primary" data-label-loading="Generating…">Generate MCP token</button>
+        </form>
+        {{ end }}
+    </div>
+</details>
+{{ end }}
+
 {{ define "content"}}
+{{ template "mcp_panel" . }}
+
 <form method="post" autocomplete="off" action="{{ routePath "/integration" }}" class="integration-form">
     <input type="hidden" name="csrf" value="{{ .csrf }}">
 
@@ -618,7 +677,7 @@
             </label>
 
             <label for="form-slack-webhook-link">{{ t "form.integration.slack_webhook_link" }}</label>
-            <input type="url" name="slack_webhook_link" id="form-slack-webhook-link" value="{{ .form.SlackWebhookLink }}" placeholder="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX" spellcheck="false">
+            <input type="url" name="slack_webhook_link" id="form-slack-webhook-link" value="{{ .form.SlackWebhookLink }}" placeholder="https://hooks.slack.com/services/EXAMPLE/EXAMPLE/EXAMPLE" spellcheck="false">
 
             <div class="buttons">
                 <button type="submit" class="button button-primary" data-label-loading="{{ t "form.submit.saving" }}">{{ t "action.update" }}</button>
