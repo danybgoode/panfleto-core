@@ -1,0 +1,194 @@
+# panfleto: weekly attempt to rebase the fork onto miniflux/v2 main.
+#
+# panfleto-core is a rebase-tracked fork: `panfleto` = upstream main + a handful of panfleto topic commits
+# (danybgoode/justread, Roadmap/09-platform-infra/miniflux-upstream-resync). This workflow is the
+# recurring act that keeps it there. Every run ends in exactly one of three states:
+#
+#   nothing to do    upstream main is already under `panfleto` -> exits quietly, opens nothing
+#   clean + builds   rebased onto upstream main, go build/vet/test green -> opens (or refreshes) a PR
+#   conflict / red   -> opens (or comments on) an issue naming the conflicting files or the failed step
+#
+# The PR is a review vehicle, not a merge button: a rebase rewrites history, so GitHub's merge would be
+# wrong. Accept it by running this workflow with `accept: true`: it tags the current tip (so the
+# superproject's old pin stays fetchable) and force-pushes the reviewed sync branch onto `panfleto`.
+# Then move the submodule pin in justread and deploy.
+#
+# Needs the repo secret SYNC_TOKEN: a fine-grained token on this repo with contents, pull-requests,
+# issues and workflows write. GITHUB_TOKEN can never push commits that touch .github/workflows/*, and
+# upstream's rebased history regularly does (dependabot bumps), so every push here uses SYNC_TOKEN.
+
+name: panfleto upstream sync
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Fork branch to sync
+        default: panfleto
+      accept:
+        description: Accept the open sync PR (tag the current tip, then force-push the sync branch onto it)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: panfleto-upstream-sync
+  cancel-in-progress: false
+
+env:
+  BASE: ${{ inputs.branch || 'panfleto' }}
+  SYNC: sync/upstream-main-${{ inputs.branch || 'panfleto' }}
+  GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+  # gh treats a git remote named `upstream` as the base repository, and this job adds one for miniflux/v2.
+  # Pin every gh call to this fork, or PRs and issues would be attempted against upstream.
+  GH_REPO: ${{ github.repository }}
+  HAS_SYNC_TOKEN: ${{ secrets.SYNC_TOKEN != '' }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+jobs:
+  sync:
+    if: github.repository == 'danybgoode/panfleto-core' && !inputs.accept
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE }}
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Fetch upstream
+        run: |
+          if [ "$HAS_SYNC_TOKEN" != "true" ]; then
+            echo "::warning::SYNC_TOKEN is not set: a clean sync cannot push or open its PR when upstream touched .github/workflows."
+          fi
+          git remote add upstream https://github.com/miniflux/v2.git
+          git fetch --no-tags upstream main
+          git config user.name "panfleto upstream sync"
+          git config user.email "actions@users.noreply.github.com"
+          echo "BASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Nothing to do?
+        id: check
+        run: |
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "nothing=true" >> "$GITHUB_OUTPUT"
+            echo "\`$BASE\` already contains upstream main ($(git rev-parse --short upstream/main)). Nothing to do." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Rebase onto upstream main
+        id: rebase
+        if: steps.check.outputs.nothing != 'true'
+        run: |
+          git switch -c "$SYNC"
+          if git rebase upstream/main > rebase.log 2>&1; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > conflicts.txt
+            echo "commit=$(git log -1 --format='%h %s' REBASE_HEAD 2>/dev/null)" >> "$GITHUB_OUTPUT"
+            git rebase --abort
+            cat rebase.log
+          fi
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.rebase.outputs.ok == 'true'
+        with:
+          go-version-file: go.mod
+
+      - name: Build, vet, test
+        id: gate
+        if: steps.rebase.outputs.ok == 'true'
+        run: |
+          for step in "go build ./..." "go vet ./..." "go test ./..."; do
+            echo "::group::$step"
+            if ! $step; then echo "failed=$step" >> "$GITHUB_OUTPUT"; echo "::endgroup::"; exit 0; fi
+            echo "::endgroup::"
+          done
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report
+        if: steps.check.outputs.nothing != 'true'
+        env:
+          REBASED: ${{ steps.rebase.outputs.ok }}
+          CONFLICT_COMMIT: ${{ steps.rebase.outputs.commit }}
+          GATE_OK: ${{ steps.gate.outputs.ok }}
+          GATE_FAILED: ${{ steps.gate.outputs.failed }}
+        run: |
+          upstream="$(git rev-parse --short upstream/main)"
+          open_issue() {
+            gh label create upstream-sync --color d73a4a --description "panfleto upstream sync needs a human" --force >/dev/null
+            existing="$(gh issue list --label upstream-sync --state open --json number --jq '.[0].number')"
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body "$2"
+            else
+              gh issue create --label upstream-sync --title "$1" --body "$2"
+            fi
+          }
+
+          if [ "$REBASED" != "true" ]; then
+            files="$(sed 's/^/- `/; s/$/`/' conflicts.txt)"
+            open_issue "Upstream sync conflict: $(paste -sd, conflicts.txt | grep . || echo "rebase failed, see run")" "Rebasing \`$BASE\` onto upstream main \`$upstream\` stopped at **$CONFLICT_COMMIT** with conflicts in:
+
+          $files
+
+          Resolve locally: \`git switch -c $SYNC $BASE && git rebase upstream/main\`, gate it, push **the sync branch** (never \`$BASE\` directly), open (or edit) the PR from it into \`$BASE\` so its body contains \`<!-- sync-base: SHA -->\` with **the current tip of \`$BASE\`** (\`$BASE_SHA\` as of this run; if \`$BASE\` moves, use the new tip), then run this workflow with \`accept: true\` so the old tip is tagged first. Run: $RUN_URL"
+            exit 1
+          fi
+
+          if [ "$GATE_OK" != "true" ]; then
+            open_issue "Upstream sync builds red: $GATE_FAILED" "\`$BASE\` rebased cleanly onto upstream main \`$upstream\`, but \`$GATE_FAILED\` failed. Run: $RUN_URL"
+            exit 1
+          fi
+
+          git push --force origin "$SYNC"
+          body="\`$BASE\` rebased onto upstream main \`$upstream\`: clean, and \`go build\` / \`go vet\` / \`go test\` green.
+
+          **panfleto commits on top of upstream** (\`git log --oneline upstream/main..$SYNC\`):
+          \`\`\`
+          $(git log --oneline upstream/main.."$SYNC")
+          \`\`\`
+          **New upstream commits** (\`git log --oneline $BASE..upstream/main\`):
+          \`\`\`
+          $(git log --oneline -n 50 "$BASE"..upstream/main)
+          \`\`\`
+          <!-- sync-base: $BASE_SHA -->
+          **Do not merge with GitHub** — a rebase rewrites history. To accept: run this workflow with \`accept: true\`, then move the submodule pin in danybgoode/justread and deploy (check upstream's new migrations first; see the epic README's *Rollback*). Run: $RUN_URL"
+          pr="$(gh pr list --head "$SYNC" --base "$BASE" --state open --json number --jq '.[0].number')"
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --body "$body"
+          else
+            gh pr create --head "$SYNC" --base "$BASE" --title "Upstream sync: rebase $BASE onto miniflux/v2 main ($upstream)" --body "$body"
+          fi
+
+  accept:
+    if: github.repository == 'danybgoode/panfleto-core' && inputs.accept
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE }}
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+      - name: Tag the current tip, then move the branch to the reviewed sync branch
+        run: |
+          git fetch origin "$SYNC"
+          old="$(git rev-parse HEAD)"
+          pr="$(gh pr list --head "$SYNC" --base "$BASE" --state open --json number --jq '.[0].number')"
+          base_sha="$(gh pr view "$pr" --json body --jq .body | sed -n 's/.*sync-base: \([0-9a-f]\{40\}\).*/\1/p')"
+          if [ -z "$pr" ] || [ "$base_sha" != "$old" ]; then
+            echo "::error::Refusing: $BASE is $old but the sync PR was built from '${base_sha:-unknown}'. Re-run the sync first so nothing pushed to $BASE since then is dropped."
+            exit 1
+          fi
+          tag="pre-sync-$(date -u +%Y%m%d%H%M)"
+          git tag "$tag" "$old"
+          git push origin "$tag"
+          git push --force-with-lease="$BASE:$old" origin "origin/$SYNC:refs/heads/$BASE"
+          # GitHub marks the PR merged by itself moments after this push; closing it may then be refused.
+          gh pr comment "$pr" --body "Accepted: \`$BASE\` is now $(git rev-parse --short origin/$SYNC); previous tip tagged \`$tag\`."
+          gh pr close "$pr" >/dev/null 2>&1 || true
+          echo "Accepted. Previous tip tagged \`$tag\`. Now move the pin in justread." >> "$GITHUB_STEP_SUMMARY"
