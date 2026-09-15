@@ -1,0 +1,129 @@
+# panfleto: build the reader's container image here, so production never compiles Go.
+#
+# Before this workflow, `deploy/update.sh` ran `docker compose build` on the single Oracle VM that
+# serves readers: a compile error took the reader down, the build competed with Postgres for 2 OCPU,
+# and a rollback meant another slow rebuild on the same box. See
+# danybgoode/justread → Roadmap/09-platform-infra/ci-build-pipeline.
+#
+# Contract with the superproject (that epic's D2/D8): every build pushes TWO tags —
+#   ghcr.io/danybgoode/panfleto-core:<full-commit-sha>   immutable; what `update.sh` actually runs
+#   ghcr.io/danybgoode/panfleto-core:panfleto            moving; for humans and ad-hoc pulls
+# `update.sh` resolves the SHA from the submodule pin, never the moving tag, so the running image
+# can't drift from the commit `main` says to run. Do not "simplify" that to :panfleto.
+#
+# Three things here are deliberate and cheap to break by accident:
+#   1. Native arm64 (`ubuntu-24.04-arm`), not QEMU. The VM is aarch64; an amd64 image pulls fine and
+#      refuses to run.
+#   2. `packaging/docker/alpine/Dockerfile` is upstream's and stays untouched (AGENTS.md rule 1).
+#      This workflow is the ONLY panfleto-owned file the image build adds to the fork.
+#   3. The version stamp is a LOCAL tag created just before the build. The Makefile already does
+#      `VERSION := $(shell git describe --tags --exact-match)`, there is no .dockerignore so .git is
+#      part of the build context, and the alpine build stage already installs git — so /about reports
+#      a version with no Dockerfile change. The tag is never pushed.
+#
+# Concurrency deliberately does NOT cancel in progress: each push is a distinct SHA and the
+# superproject may pin any of them, so a cancelled run means a pin with no image. Note the weaker
+# guarantee this actually buys: GitHub keeps only the most recent PENDING run per group, so three
+# pushes inside one 35 s build can still leave the middle SHA unbuilt. If a pin turns out to have no
+# image, `gh workflow run "panfleto image" --ref <sha>` builds it.
+
+name: panfleto image
+
+on:
+  push:
+    branches: [panfleto]
+    paths-ignore:
+      - '**.md'
+      - 'ChangeLog'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/pull_request_template.md'
+  workflow_dispatch:
+
+concurrency:
+  group: panfleto-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    # The fork inherits upstream's workflows; this one is panfleto's and must never run elsewhere.
+    if: github.repository == 'danybgoode/panfleto-core'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # git describe needs history; the version tag is created below
+          # There is deliberately no .dockerignore (D7 needs .git in the build context), and the
+          # Dockerfile does `ADD . /go/src/app` - so checkout's default credential helper would bake
+          # a live GITHUB_TOKEN into the build stage. It does not reach GHCR today (only the compiled
+          # binary is COPY'd into the final stage, and no builder cache is exported), but one
+          # `--target build` would publish it. Nothing here needs to talk to git over the network.
+          persist-credentials: false
+
+      - name: Stamp a version the Makefile can read
+        id: version
+        run: |
+          version="panfleto-$(git rev-parse --short HEAD)"
+          git tag -f "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version stamp: $version"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build
+        id: build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          start=$(date +%s)
+          docker build \
+            --file packaging/docker/alpine/Dockerfile \
+            --tag "$IMAGE:${{ github.sha }}" \
+            --tag "$IMAGE:panfleto" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            .
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+
+      - name: Verify architecture and version before publishing
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          arch=$(docker image inspect "$IMAGE:${{ github.sha }}" --format '{{ .Architecture }}')
+          echo "Architecture: $arch"
+          [ "$arch" = "arm64" ] || { echo "::error::built $arch, but the production VM is aarch64"; exit 1; }
+          reported=$(docker run --rm "$IMAGE:${{ github.sha }}" miniflux -version)
+          echo "miniflux -version: $reported"
+          [ "$reported" = "$VERSION" ] || echo "::warning::version stamp did not reach the binary (got '$reported', wanted '$VERSION')"
+
+      - name: Push
+        run: |
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:panfleto"
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SECONDS_TAKEN: ${{ steps.build.outputs.seconds }}
+        run: |
+          {
+            echo "### panfleto image"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`$IMAGE:${{ github.sha }}\` |"
+            echo "| Moving tag | \`$IMAGE:panfleto\` |"
+            echo "| Version | \`$VERSION\` |"
+            echo "| Runner | \`${{ runner.os }}/${{ runner.arch }}\` (native, no QEMU) |"
+            echo "| Build seconds | **$SECONDS_TAKEN** |"
+            echo
+            echo "Deploy: move the submodule pin in \`danybgoode/justread\` to \`${{ github.sha }}\`, merge, then run \`/opt/panfleto/deploy/update.sh\` on the VM."
+          } >> "$GITHUB_STEP_SUMMARY"
