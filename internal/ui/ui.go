@@ -103,6 +103,7 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /entry/save/{entryID}", handler.saveEntry)
 	mux.HandleFunc("POST /entry/enclosure/{enclosureID}/save-progression", handler.saveEnclosureProgression)
 	mux.HandleFunc("POST /entry/download/{entryID}", handler.fetchContent)
+	mux.HandleFunc("GET /entry/{entryID}/comments", handler.showEntryComments) // panfleto: inline comments
 	mux.HandleFunc("POST /entry/star/{entryID}", handler.toggleStarred)
 
 	// Media proxy.
@@ -127,6 +128,14 @@ func Serve(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /settings", handler.updateSettings)
 	mux.HandleFunc("GET /integrations", handler.showIntegrationPage)
 	mux.HandleFunc("POST /integration", handler.updateIntegration)
+	// panfleto: the MCP credential is created and replaced explicitly, never as a side effect of
+	// viewing the page (Roadmap/03-agent-surface/mcp-token-handling). POST, so a prefetched link
+	// cannot destroy a credential; CSRF is enforced for every non-safe method by csrfMiddleware.
+	mux.HandleFunc("POST /integration/mcp/generate", handler.generateMCPToken)
+	mux.HandleFunc("POST /integration/mcp/rotate", handler.rotateMCPToken)
+	// Revealing is a POST too: it is the only way to ask for the credential without putting anything
+	// in a URL, and it keeps the token out of the page's HTML on every ordinary visit to Settings.
+	mux.HandleFunc("POST /integration/mcp/reveal", handler.revealMCPToken)
 	mux.HandleFunc("GET /about", handler.showAboutPage)
 
 	// Session pages.
