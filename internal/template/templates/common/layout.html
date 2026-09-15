@@ -25,7 +25,7 @@
     <link rel="apple-touch-icon" sizes="167x167" href="{{ iconPath "icon-167.png" }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ iconPath "icon-180.png" }}">
 
-    {{ $cspNonce := nonce }}
+    {{ $cspNonce := .cspNonce }}
     {{ csp .user $cspNonce | safeHTML }}
     <link rel="stylesheet" nonce="{{ $cspNonce }}" type="text/css" href="{{ routePath "/stylesheets/%s/%s.css" .theme_checksum .theme }}">
     <script nonce="{{ $cspNonce }}" src="{{ routePath "/js/%s/%s.js" .app_js_checksum "app" }}" type="module"></script>
