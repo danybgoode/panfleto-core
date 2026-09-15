@@ -750,6 +750,52 @@ function handleStarAction(element) {
 }
 
 /**
+ * The one "html" Trusted Types policy. CSP's trusted-types directive forbids creating a second policy
+ * with the same name, so every caller shares this one (panfleto: inline comments).
+ *
+ * @returns {object}
+ */
+let sharedHtmlPolicy = null;
+function htmlPolicy() {
+    if (!sharedHtmlPolicy) {
+        sharedHtmlPolicy = trustedTypes.createPolicy('html', {createHTML: html => html});
+    }
+    return sharedHtmlPolicy;
+}
+
+/**
+ * Load an entry's comment thread the first time its panel is opened (panfleto: inline comments).
+ * The server sanitizes every comment body before rendering the fragment.
+ *
+ * @returns {void}
+ */
+function initializeCommentsPanel() {
+    const details = document.querySelector("details[data-comments-url]");
+    if (!details) return;
+
+    details.addEventListener("toggle", () => {
+        if (!details.open || details.dataset.commentsLoaded) return;
+        details.dataset.commentsLoaded = "true";
+
+        const panel = details.querySelector("[data-comments-panel]");
+        const loadingMarkup = panel.innerHTML;
+        fetch(details.dataset.commentsUrl, {credentials: "same-origin", redirect: "error"})
+            .then((response) => {
+                // 502 carries the "view on the site" fragment; anything else (an expired session's
+                // login page, an error page) is not a fragment and is never inserted.
+                if (!response.ok && response.status !== 502) throw new Error(`comments: ${response.status}`);
+                return response.text();
+            })
+            .then((html) => { panel.innerHTML = htmlPolicy().createHTML(html); })
+            .catch(() => {
+                delete details.dataset.commentsLoaded;
+                details.open = false;
+                panel.innerHTML = htmlPolicy().createHTML(loadingMarkup);
+            });
+    });
+}
+
+/**
  * Handle fetching the original content of an entry.
  *
  * @returns {void}
@@ -767,8 +813,7 @@ function handleFetchOriginalContentAction() {
 
         response.json().then((data) => {
             if (data.content && data.reading_time) {
-                const ttpolicy = trustedTypes.createPolicy('html', {createHTML: html => html});
-                document.querySelector(".entry-content").innerHTML = ttpolicy.createHTML(data.content);
+                document.querySelector(".entry-content").innerHTML = htmlPolicy().createHTML(data.content);
                 const entryReadingtimeElement = document.querySelector(".entry-reading-time");
                 if (entryReadingtimeElement) {
                     entryReadingtimeElement.textContent = data.reading_time;
@@ -1290,6 +1335,7 @@ initializeWebAuthn();
 initializeKeyboardShortcuts();
 initializeTouchHandler();
 initializeClickHandlers();
+initializeCommentsPanel();
 initializeServiceWorker();
 
 // Reload the page if it was restored from the back-forward cache and mark entries as read is enabled.
