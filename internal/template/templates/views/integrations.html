@@ -15,6 +15,20 @@
         <div role="alert" class="alert alert-error">{{ .errorMessage }}</div>
     {{ end }}
 
+    <details open>
+        <summary>Panfleto AI Assistant (MCP)</summary>
+        <div class="form-section">
+            <p style="margin-top: 0;">Connect your Panfleto account to any MCP-compatible AI client (like Claude, Cursor, or Continue) to get daily digests, manage feeds, and search articles directly from chat.</p>
+            
+            <label>Your MCP URL</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" value="https://panfleto.win/api/mcp?token={{ .mcpToken }}" readonly spellcheck="false" style="flex: 1; font-family: monospace;" onclick="this.select();">
+            </div>
+
+            <p style="margin-bottom: 0;"><strong>Claude Users:</strong> <a href="https://claude.ai/customize/connectors?modal=add-custom-connector" target="_blank" rel="noopener noreferrer">Click here to add the connector</a>, then paste your MCP URL above.</p>
+        </div>
+    </details>
+
     <details {{ if .form.ArchiveorgEnabled }}open{{ end }}>
         <summary>Archive.org</summary>
         <div class="form-section">
@@ -618,7 +632,7 @@
             </label>
 
             <label for="form-slack-webhook-link">{{ t "form.integration.slack_webhook_link" }}</label>
-            <input type="url" name="slack_webhook_link" id="form-slack-webhook-link" value="{{ .form.SlackWebhookLink }}" placeholder="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX" spellcheck="false">
+            <input type="url" name="slack_webhook_link" id="form-slack-webhook-link" value="{{ .form.SlackWebhookLink }}" placeholder="https://hooks.slack.com/services/EXAMPLE/EXAMPLE/EXAMPLE" spellcheck="false">
 
             <div class="buttons">
                 <button type="submit" class="button button-primary" data-label-loading="{{ t "form.submit.saving" }}">{{ t "action.update" }}</button>
