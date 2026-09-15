@@ -116,6 +116,14 @@
                     </form>
                 </li>
                 {{ end }}
+                {{/* panfleto: article autofetch. The state is derived from the prefetcher's memory, never stored
+                     (article-autofetch A3). The note is English like the rail below it (D8). */}}
+                {{ $fetchState := "" }}{{ if .fetchState }}{{ $fetchState = call .fetchState .entry.ID }}{{ end }}
+                {{ if eq $fetchState "fetching" }}
+                <li>
+                    <span class="page-button" aria-busy="true" title="{{ t "entry.scraper.title" }}">{{ icon "scraper" }}<span class="icon-label">{{ t "entry.state.loading" }}</span></span>
+                </li>
+                {{ else }}
                 <li>
                     <button
                         class="page-button"
@@ -125,6 +133,10 @@
                         data-label-loading="{{ t "entry.state.loading" }}"
                         >{{ icon "scraper" }}<span class="icon-label">{{ t "entry.scraper.label" }}</span></button>
                 </li>
+                {{ if eq $fetchState "failed" }}
+                <li><span class="page-button">Automatic fetching found nothing. Try the paywall links below.</span></li>
+                {{ end }}
+                {{ end }}
                 {{ if .entry.CommentsURL }}
                 <li>
                     <a href="{{ .entry.CommentsURL }}"
