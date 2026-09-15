@@ -3,9 +3,9 @@
 <html lang="{{ replace .language "_" "-"}}">
 <head>
     <meta charset="utf-8">
-    <title>{{template "title" .}} - Miniflux</title>
+    <title>{{template "title" .}} - panfleto</title>
 
-    <meta name="apple-mobile-web-app-title" content="Miniflux">
+    <meta name="apple-mobile-web-app-title" content="panfleto">
     <meta name="googlebot" content="notranslate">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="referrer" content="no-referrer">
@@ -56,7 +56,7 @@
         <nav>
             <div class="logo" data-toggle-button-label="{{ t "menu.title" }}">
                 <a aria-label="{{ t "menu.home_page" }}" href="{{ routePath (printf "/%s" .user.DefaultHomePage) }}">
-                    Mini<span>flux</span>
+                    pan<span>fleto</span>
                 </a>
                 {{ icon "chevron-down"}}
             </div>
@@ -96,6 +96,9 @@
                 <li {{ if eq .menu "search" }}class="active"{{ end }} title="{{ t "tooltip.keyboard_shortcuts" "/" }}">
                     <a href="{{ routePath "/search" }}" data-page="search">{{ icon "search" }}{{ t "menu.search" }}</a>
                 </li>
+                <li>
+                    <a href="https://editorial-panfleto.vercel.app/tu-edicion/conectar" target="_blank" rel="noopener noreferrer">{{ icon "external-link" }}Tu edición</a>
+                </li>
                 <li {{ if eq .menu "settings" }}class="active"{{ end }} title="{{ t "tooltip.keyboard_shortcuts" "g s" }}">
                     <a href="{{ routePath "/settings" }}" data-page="settings">{{ icon "settings" }}{{ t "menu.settings" }}</a>
                 </li>
@@ -123,6 +126,9 @@
     <main id="main">
         {{template "content" .}}
     </main>
+
+
+
     <dialog id="keyboard-shortcuts-modal" closedby="any">
         <form method="dialog">
             <button class="btn-close-modal" aria-label="Close" autofocus>x</button>
