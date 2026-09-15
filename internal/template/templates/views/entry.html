@@ -287,6 +287,22 @@
         {{ safeHTML .entry.Content }}
     {{ end }}
 </article>
+
+{{/* unwall.app takes the article as host/path, no scheme. The scheme is cut here rather than in a Go
+     helper (a helper would add functions.go to the fork's delta); html/template still escapes what is
+     left, and the https://unwall.app/ origin is fixed, so no entry URL can change where the link goes. */}}
+{{ $unwall := "" }}{{ if startsWith .entry.URL "https://" }}{{ $unwall = slice .entry.URL 8 }}{{ else if startsWith .entry.URL "http://" }}{{ $unwall = slice .entry.URL 7 }}{{ end }}
+<div class="entry-archive-link" style="margin-top: 1rem; font-weight: bold; padding: 1rem; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; display: flex; justify-content: space-between;">
+    <div>
+        {{ icon "external-link" }} 🔓 Paywall Bypass:
+        <a href="https://archive.ph/newest/{{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Archive.ph</a> •
+        <a href="https://archive.is/newest/{{ .entry.URL | untrustedURL }}" target="_blank" rel="noopener">Archive.is</a>
+        {{- if $unwall }} •
+        <a href="https://unwall.app/{{ $unwall }}" target="_blank" rel="noopener">unwall.app</a>
+        {{- end }}
+    </div>
+    <a href="https://buymeacoffee.com/savepanflo" target="_blank" rel="noopener" style="color: #BD5FFF;">{{ icon "star" }} Save Panflo</a>
+</div>
 {{ if .entry.Enclosures }}
 <details class="entry-enclosures">
     <summary>{{ t "page.entry.attachments" }} ({{ len .entry.Enclosures }})</summary>
