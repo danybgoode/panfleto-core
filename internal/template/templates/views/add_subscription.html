@@ -145,6 +145,31 @@
             <button type="submit" class="button button-primary" data-label-loading="{{ t "form.submit.loading" }}">{{ t "page.add_feed.submit" }}</button>
         </div>
     </form>
+
+    {{ if and .categories .suggestedFeeds }}
+    <h3>Suggested Feeds</h3>
+    <table>
+        <tbody>
+        {{ range $feed := .suggestedFeeds }}
+            {{ $categoryID := (index $.categories 0).ID }}
+            {{ range $.categories }}{{ if eq .Title $feed.Category }}{{ $categoryID = .ID }}{{ end }}{{ end }}
+            <tr>
+                <td>{{ $feed.Category }}</td>
+                <td><span title="{{ $feed.URL }}">{{ $feed.Title }}</span></td>
+                <td>
+                    <form action="{{ routePath "/subscribe" }}" method="post" class="suggested-feed">
+                        <input type="hidden" name="csrf" value="{{ $.csrf }}">
+                        <input type="hidden" name="url" value="{{ $feed.URL }}">
+                        <input type="hidden" name="category_id" value="{{ $categoryID }}">
+                        <button type="submit" class="button">Quick Add</button>
+                        <a href="{{ routePath "/bookmarklet" }}?uri={{ $feed.URL }}">Review</a>
+                    </form>
+                </td>
+            </tr>
+        {{ end }}
+        </tbody>
+    </table>
+    {{ end }}
 {{ end }}
 
 {{ end }}

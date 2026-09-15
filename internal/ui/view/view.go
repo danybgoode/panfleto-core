@@ -60,6 +60,7 @@ func newView(tpl *template.Engine, r *http.Request) *view {
 		"app_js_checksum": static.JavascriptBundles["app.js"].Checksum,
 		"sw_js_checksum":  static.JavascriptBundles["service-worker.js"].Checksum,
 		"webAuthnEnabled": config.Opts.WebAuthn(),
+		"suggestedFeeds":  SuggestedFeeds(),
 	}}
 }
 
