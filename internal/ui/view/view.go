@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"miniflux.app/v2/internal/config"
+	"miniflux.app/v2/internal/crypto"
 	"miniflux.app/v2/internal/http/request"
 	"miniflux.app/v2/internal/template"
 	"miniflux.app/v2/internal/ui/static"
@@ -46,5 +47,6 @@ func New(tpl *template.Engine, r *http.Request) *view {
 		"app_js_checksum":     static.JavascriptBundles["app.js"].Checksum,
 		"sw_js_checksum":      static.JavascriptBundles["service-worker.js"].Checksum,
 		"webAuthnEnabled":     config.Opts.WebAuthn(),
+		"cspNonce":            crypto.GenerateRandomStringHex(16),
 	}}
 }
