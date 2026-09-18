@@ -1407,3 +1407,201 @@ footer .elevator {
 .pagination-entry-top .elevator {
     display: none;
 }
+
+/* ============================================
+   Comments Styles (HackerNews-style)
+   ============================================ */
+
+/* Comment container */
+.entry-comment {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* Comment header with collapse button */
+.entry-comment-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* Collapse/expand toggle button */
+.collapse-toggle {
+    cursor: pointer;
+    background: none;
+    border: 1px solid var(--border-color);
+    padding: 2px 6px;
+    font-size: 0.85em;
+    font-family: monospace;
+    border-radius: 3px;
+    color: var(--body-color);
+    min-width: 24px;
+    text-align: center;
+}
+
+.collapse-toggle:hover {
+    background-color: var(--bg-color);
+}
+
+.collapse-toggle:active {
+    translate: 1px 1px;
+}
+
+/* Comment metadata */
+.entry-comment-meta {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin: 0;
+    font-size: 0.9em;
+}
+
+.entry-comment-meta strong {
+    font-weight: 600;
+}
+
+.entry-comment-meta time {
+    color: var(--muted-color);
+}
+
+/* Reply count indicator */
+.entry-comment-reply-count {
+    font-size: 0.85em;
+    color: var(--muted-color);
+    font-weight: 400;
+}
+
+/* Comment body */
+.entry-comment-body {
+    margin-top: 5px;
+    line-height: 1.45em;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Comment children container */
+.entry-comment-children {
+    margin-top: 10px;
+    border-left: 2px solid var(--border-color);
+    padding-left: 15px;
+}
+
+/* Comments controls (Expand All / Collapse All) */
+.comments-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.comments-controls .page-button {
+    font-size: 0.9em;
+    padding: 4px 8px;
+}
+
+/* View all comments link */
+.entry-comments-view-all {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dotted var(--border-color);
+}
+
+.entry-comments-view-all a {
+    font-size: 0.95em;
+}
+
+/* ============================================
+   Mobile Optimization for Comments
+   ============================================ */
+
+@media (max-width: 768px) {
+    /* Reduce blockquote indentation on mobile */
+    .entry-content blockquote {
+        border-left-width: 2px;
+        padding-left: 15px;
+        margin-left: 10px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    /* Ensure comments don't overflow on mobile */
+    .entry-content blockquote.entry-comment {
+        margin-left: 0;
+        padding-left: 12px;
+    }
+
+    /* Comment header adjustments for mobile */
+    .entry-comment-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .collapse-toggle {
+        font-size: 0.8em;
+        padding: 1px 4px;
+        min-width: 20px;
+    }
+
+    .entry-comment-meta {
+        font-size: 0.85em;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    /* Reduce nested comment indentation on mobile */
+    .entry-comment-children {
+        padding-left: 12px;
+        border-left-width: 1px;
+    }
+
+    /* Prevent horizontal overflow in comment content */
+    .entry-comment-body {
+        overflow-wrap: anywhere;
+    }
+
+    .entry-comment-body a {
+        overflow-wrap: anywhere;
+        word-break: break-all;
+    }
+
+    /* Ensure reply count doesn't cause overflow */
+    .entry-comment-reply-count {
+        display: block;
+        margin-top: 2px;
+    }
+
+    /* Comments controls on mobile */
+    .comments-controls {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .comments-controls .page-button {
+        font-size: 0.85em;
+        width: 100%;
+    }
+}
+
+/* Desktop-specific comment styles */
+@media (min-width: 769px) {
+    .entry-comment-header {
+        align-items: center;
+    }
+
+    .entry-comment-meta {
+        flex-direction: row;
+    }
+
+    .entry-comment-reply-count {
+        display: inline;
+    }
+
+    .comments-controls {
+        flex-direction: row;
+    }
+}
