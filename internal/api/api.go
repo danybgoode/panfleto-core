@@ -63,6 +63,7 @@ func NewHandler(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("PUT /v1/entries/{entryID}/star", handler.toggleStarredHandler)
 	mux.HandleFunc("POST /v1/entries/{entryID}/save", handler.saveEntryHandler)
 	mux.HandleFunc("GET /v1/entries/{entryID}/fetch-content", handler.fetchContentHandler)
+	mux.HandleFunc("GET /v1/entries/{entryID}/comments", handler.getCommentsByEntryID)
 	mux.HandleFunc("PUT /v1/flush-history", handler.flushHistoryHandler)
 	mux.HandleFunc("DELETE /v1/flush-history", handler.flushHistoryHandler)
 	mux.HandleFunc("GET /v1/icons/{iconID}", handler.getIconByIconIDHandler)
@@ -73,6 +74,8 @@ func NewHandler(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /v1/api-keys", handler.createAPIKeyHandler)
 	mux.HandleFunc("GET /v1/api-keys", handler.getAPIKeysHandler)
 	mux.HandleFunc("DELETE /v1/api-keys/{apiKeyID}", handler.deleteAPIKeyHandler)
+	// Public endpoint for fetching comments by URL (no auth required for public sources)
+	mux.HandleFunc("GET /v1/comments", handler.getCommentsByURL)
 
 	return middleware.withCORSHeaders(middleware.validateAPIKeyAuth(middleware.validateBasicAuth(mux)))
 }
