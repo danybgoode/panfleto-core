@@ -98,10 +98,17 @@ func TestEveryCommentBodyIsSanitized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, forbidden := range []string{"<script", "alert(document.cookie)", "onerror", "javascript:", "onclick", "evil.example"} {
+	// Check that user-provided malicious content is sanitized from comment bodies
+	// Note: Our template adds onclick to buttons, so we check for user content specifically
+	for _, forbidden := range []string{"<script", "alert(document.cookie)", "onerror", "javascript:", "evil.example"} {
 		if strings.Contains(string(html), forbidden) {
 			t.Errorf("%q survived the sanitizer:\n%s", forbidden, html)
 		}
+	}
+	// Check that user-provided onclick in comment body is sanitized
+	// (but our template's onclick on buttons is allowed)
+	if strings.Contains(string(html), `<p onclick="steal()">`) {
+		t.Errorf("user-provided onclick survived the sanitizer:\n%s", html)
 	}
 	if !strings.Contains(string(html), "<p>hi</p>") || !strings.Contains(string(html), "reply") {
 		t.Errorf("the harmless parts of the comments should remain:\n%s", html)

@@ -22,18 +22,36 @@ func sanitizeBody(commentsURL, body string) string {
 
 // The fragment uses only classes the reader's stylesheets already have, because the CSP blocks inline
 // styles (D6): replies nest as blockquotes inside .entry-content, which the themes already indent.
+// Added collapse/expand functionality (ported from editorial-panfleto) with keyboard shortcuts.
 var fragment = template.Must(template.New("comments").Parse(`
 {{- define "comment" -}}
-<blockquote class="entry-comment">
-<p class="entry-comment-meta"><strong>{{ .Comment.Author }}</strong> · <time datetime="{{ .Comment.Created.UTC.Format "2006-01-02T15:04:05Z" }}">{{ call .Elapsed .Comment.Created }}</time></p>
+<blockquote class="entry-comment" id="comment-{{ .Index }}">
+<div class="entry-comment-header">
+<button class="collapse-toggle" onclick="toggleComment(this)" aria-expanded="true" aria-controls="comment-body-{{ .Index }}">[-]</button>
+<p class="entry-comment-meta">
+<strong>{{ .Comment.Author }}</strong> · 
+<time datetime="{{ .Comment.Created.UTC.Format "2006-01-02T15:04:05Z" }}">{{ call .Elapsed .Comment.Created }}</time>
+{{- if .Children }}<span class="entry-comment-reply-count">(+{{ len .Children }} replies)</span>{{ end }}
+</p>
+</div>
+<div class="entry-comment-body" id="comment-body-{{ .Index }}">
 {{ .Body }}
+</div>
+{{- if .Children }}
+<div class="entry-comment-children">
 {{- range .Children }}{{ template "comment" . }}{{ end }}
+</div>
+{{- end }}
 </blockquote>
 {{- end -}}
 <div class="entry-content entry-comments-thread">
+<div class="comments-controls">
+<button class="page-button" onclick="expandAllComments()" title="Expand all comments">[Expand All]</button>
+<button class="page-button" onclick="collapseAllComments()" title="Collapse all comments">[Collapse All]</button>
+</div>
 {{- range .Comments }}{{ template "comment" . }}{{ end }}
 {{- if .Truncated }}
-<p><a href="{{ .CommentsURL }}" target="_blank" rel="noopener noreferrer">{{ .ViewAll }}</a></p>
+<p class="entry-comments-view-all"><a href="{{ .CommentsURL }}" target="_blank" rel="noopener noreferrer">{{ .ViewAll }}</a></p>
 {{- end }}
 </div>`))
 
@@ -45,6 +63,7 @@ type commentView struct {
 	Body     template.HTML
 	Children []commentView
 	Elapsed  func(time.Time) string
+	Index    int
 }
 
 // Render returns the thread as an HTML fragment in the reader's language and timezone.
@@ -52,16 +71,19 @@ func Render(thread *Thread, language, tz, commentsURL string) ([]byte, error) {
 	printer := locale.NewPrinter(language)
 	elapsed := func(t time.Time) string { return elapsedTime(printer, tz, t) }
 
+	var commentIndex int
 	var views func(comments []*Comment) []commentView
 	views = func(comments []*Comment) []commentView {
 		out := make([]commentView, 0, len(comments))
 		for _, comment := range comments {
+			commentIndex++
 			out = append(out, commentView{
 				Comment: comment,
 				// Safe: Body was sanitized in buildThread, before the thread was cached.
 				Body:     template.HTML(comment.Body),
 				Children: views(comment.Children),
 				Elapsed:  elapsed,
+				Index:    commentIndex,
 			})
 		}
 		return out
