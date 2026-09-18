@@ -74,8 +74,15 @@ func NewHandler(store *storage.Storage, pool *worker.Pool) http.Handler {
 	mux.HandleFunc("POST /v1/api-keys", handler.createAPIKeyHandler)
 	mux.HandleFunc("GET /v1/api-keys", handler.getAPIKeysHandler)
 	mux.HandleFunc("DELETE /v1/api-keys/{apiKeyID}", handler.deleteAPIKeyHandler)
-	// Public endpoint for fetching comments by URL (no auth required for public sources)
-	mux.HandleFunc("GET /v1/comments", handler.getCommentsByURL)
 
-	return middleware.withCORSHeaders(middleware.validateAPIKeyAuth(middleware.validateBasicAuth(mux)))
+	// Public endpoint for fetching comments by URL (no auth required for public sources)
+	publicMux := http.NewServeMux()
+	publicMux.HandleFunc("GET /v1/comments", handler.getCommentsByURL)
+
+	// Chain middlewares: public routes get CORS only, private routes get auth + CORS
+	finalMux := http.NewServeMux()
+	finalMux.Handle("/v1/comments", middleware.withCORSHeaders(publicMux))
+	finalMux.Handle("/", middleware.withCORSHeaders(middleware.validateAPIKeyAuth(middleware.validateBasicAuth(mux))))
+
+	return finalMux
 }
