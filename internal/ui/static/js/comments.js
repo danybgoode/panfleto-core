@@ -89,13 +89,38 @@ function initKeyboardShortcuts() {
 }
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
+function initializeComments() {
     initCommentVisibility();
     initKeyboardShortcuts();
-});
+    
+    // Use event delegation for dynamically loaded comments
+    // This allows collapse/expand to work even with the restrictive CSP
+    // that blocks inline event handlers in the comments fragment
+    document.addEventListener('click', (e) => {
+        const toggleButton = e.target.closest ? e.target.closest('.collapse-toggle') : null;
+        if (toggleButton) {
+            e.preventDefault();
+            toggleComment(toggleButton);
+        }
+        
+        // Handle Expand All / Collapse All buttons
+        const actionButton = e.target.closest ? e.target.closest('[data-comments-action]') : null;
+        if (actionButton) {
+            e.preventDefault();
+            const action = actionButton.getAttribute('data-comments-action');
+            if (action === 'expand-all') {
+                expandAllComments();
+            } else if (action === 'collapse-all') {
+                collapseAllComments();
+            }
+        }
+    });
+}
+
+// Initialize immediately (for both initial page load and dynamic content)
+document.addEventListener('DOMContentLoaded', initializeComments);
 
 // Also run if loaded dynamically (for lazy-loaded comments)
 if (document.readyState !== 'loading') {
-    initCommentVisibility();
-    initKeyboardShortcuts();
+    initializeComments();
 }
