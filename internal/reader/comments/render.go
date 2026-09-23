@@ -23,11 +23,13 @@ func sanitizeBody(commentsURL, body string) string {
 // The fragment uses only classes the reader's stylesheets already have, because the CSP blocks inline
 // styles (D6): replies nest as blockquotes inside .entry-content, which the themes already indent.
 // Added collapse/expand functionality (ported from editorial-panfleto) with keyboard shortcuts.
+// Note: event handlers use event delegation from comments.js (bundled in app.js) to work around
+// the restrictive CSP that blocks inline event handlers in the fragment.
 var fragment = template.Must(template.New("comments").Parse(`
 {{- define "comment" -}}
 <blockquote class="entry-comment" id="comment-{{ .Index }}">
 <div class="entry-comment-header">
-<button class="collapse-toggle" onclick="toggleComment(this)" aria-expanded="true" aria-controls="comment-body-{{ .Index }}">[-]</button>
+<button class="collapse-toggle" aria-expanded="true" aria-controls="comment-body-{{ .Index }}" data-comment-toggle="true">[-]</button>
 <p class="entry-comment-meta">
 <strong>{{ .Comment.Author }}</strong> · 
 <time datetime="{{ .Comment.Created.UTC.Format "2006-01-02T15:04:05Z" }}">{{ call .Elapsed .Comment.Created }}</time>
@@ -46,8 +48,8 @@ var fragment = template.Must(template.New("comments").Parse(`
 {{- end -}}
 <div class="entry-content entry-comments-thread">
 <div class="comments-controls">
-<button class="page-button" onclick="expandAllComments()" title="Expand all comments">[Expand All]</button>
-<button class="page-button" onclick="collapseAllComments()" title="Collapse all comments">[Collapse All]</button>
+<button class="page-button" data-comments-action="expand-all" title="Expand all comments">[Expand All]</button>
+<button class="page-button" data-comments-action="collapse-all" title="Collapse all comments">[Collapse All]</button>
 </div>
 {{- range .Comments }}{{ template "comment" . }}{{ end }}
 {{- if .Truncated }}
