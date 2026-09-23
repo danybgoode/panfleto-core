@@ -1105,6 +1105,8 @@ article.category-has-unread {
     color: var(--entry-content-color);
     line-height: 1.4em;
     overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
 }
 
 .entry-content h1, h2, h3, h4, h5, h6 {
@@ -1202,10 +1204,12 @@ article.category-has-unread {
 
 .entry-content pre {
     padding: 5px;
-    overflow: auto;
-    overflow-wrap: initial;
+    overflow-x: auto;
+    overflow-wrap: break-word;
+    word-break: break-all;
     border-width: 1px;
     border-style: solid;
+    max-width: 100%;
 }
 
 .entry-content pre,
@@ -1213,6 +1217,11 @@ article.category-has-unread {
     color: var(--entry-content-code-color);
     background: var(--entry-content-code-background);
     border-color: var(--entry-content-code-border-color);
+    word-break: break-word;
+}
+
+.entry-content code {
+    overflow-wrap: break-word;
 }
 
 .entry-content table {
@@ -1439,10 +1448,12 @@ footer .elevator {
     color: var(--body-color);
     min-width: 24px;
     text-align: center;
+    transition: background-color 0.15s ease;
 }
 
 .collapse-toggle:hover {
     background-color: var(--bg-color);
+    border-color: var(--body-color);
 }
 
 .collapse-toggle:active {
@@ -1461,6 +1472,7 @@ footer .elevator {
 
 .entry-comment-meta strong {
     font-weight: 600;
+    color: var(--body-color);
 }
 
 .entry-comment-meta time {
@@ -1480,6 +1492,11 @@ footer .elevator {
     line-height: 1.45em;
     overflow-wrap: break-word;
     word-break: break-word;
+    padding: 4px 0;
+}
+
+.entry-comment-body :first-child {
+    margin-top: 0;
 }
 
 /* Comment children container */
@@ -1500,6 +1517,13 @@ footer .elevator {
 .comments-controls .page-button {
     font-size: 0.9em;
     padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.comments-controls .page-button:hover {
+    background-color: var(--bg-color);
+    border-color: var(--body-color);
 }
 
 /* View all comments link */
@@ -1525,12 +1549,42 @@ footer .elevator {
         margin-left: 10px;
         margin-top: 10px;
         margin-bottom: 10px;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     /* Ensure comments don't overflow on mobile */
     .entry-content blockquote.entry-comment {
         margin-left: 0;
         padding-left: 12px;
+        max-width: 100%;
+    }
+
+    /* Prevent horizontal overflow in entry content on mobile */
+    .entry-content {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .entry-content * {
+        max-width: 100%;
+        overflow-wrap: break-word;
+    }
+
+    .entry-content pre {
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .entry-content table {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .entry-content iframe,
+    .entry-content video {
+        max-width: 100%;
     }
 
     /* Comment header adjustments for mobile */
@@ -1562,11 +1616,23 @@ footer .elevator {
     /* Prevent horizontal overflow in comment content */
     .entry-comment-body {
         overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .entry-comment-body a {
         overflow-wrap: anywhere;
         word-break: break-all;
+    }
+
+    .entry-comment-body pre {
+        overflow-x: auto;
+        word-break: break-all;
+        max-width: 100%;
+    }
+
+    .entry-comment-body code {
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     /* Ensure reply count doesn't cause overflow */
