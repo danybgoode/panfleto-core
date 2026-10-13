@@ -628,7 +628,7 @@ func NewConfigOptions() *configOptions {
 				rawValue:         "",
 				valueType:        stringListType,
 				validator: func(rawValue string) error {
-					return validateListChoices(parseStringListValue(rawValue, nil), []string{"unwall"})
+					return validateListChoices(parseStringListValue(rawValue, nil), []string{"unwall", "wallhop"})
 				},
 			},
 			"FETCH_THIN_CONTENT_THRESHOLD": {
