@@ -29,7 +29,7 @@ type step func(pageURL string) (baseURL, content string)
 // Swapped out by tests.
 var (
 	scrapeWebsite = scraper.ScrapeWebsite
-	fallbackSteps = map[string]step{"unwall": fetchFromUnwall}
+	fallbackSteps = map[string]step{"unwall": fetchFromUnwall, "wallhop": fetchFromWallhop}
 )
 
 // TextLength counts the characters of text in an HTML fragment.
