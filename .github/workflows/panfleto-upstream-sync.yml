@@ -5,7 +5,8 @@
 # recurring act that keeps it there. Every run ends in exactly one of three states:
 #
 #   nothing to do    upstream main is already under `panfleto` -> exits quietly, opens nothing
-#   clean + builds   rebased onto upstream main, go build/vet/test green -> opens (or refreshes) a PR
+#   clean + builds   rebased onto upstream main, go build/vet/test green -> opens a PR;
+#                    small low-risk syncs are accepted automatically, substantial ones ping the owner
 #   conflict / red   -> opens (or comments on) an issue naming the conflicting files or the failed step
 #
 # The PR is a review vehicle, not a merge button: a rebase rewrites history, so GitHub's merge would be
@@ -111,6 +112,25 @@ jobs:
           done
           echo "ok=true" >> "$GITHUB_OUTPUT"
 
+      - name: Classify upstream change
+        id: classify
+        if: steps.gate.outputs.ok == 'true'
+        run: |
+          fork_point="$(git merge-base "$BASE" upstream/main)"
+          git diff --name-only "$fork_point" upstream/main > upstream-files.txt
+          git log --format='%s' "$fork_point"..upstream/main > upstream-subjects.txt
+          files="$(wc -l < upstream-files.txt)"
+          commits="$(wc -l < upstream-subjects.txt)"
+          if [ "$files" -gt 20 ] || [ "$commits" -gt 5 ] ||
+             grep -Eq '^(internal/(database|storage|config|api|oauth2|http/server|reader/fetcher)/|\.github/workflows/|go\.(mod|sum)$|packaging/)' upstream-files.txt ||
+             grep -Eiq '(BREAKING|security|auth|oauth|migrat|schema|(^|[[:space:]])feat[(:!])' upstream-subjects.txt; then
+            echo "major=true" >> "$GITHUB_OUTPUT"
+            echo "Substantial upstream change: PR review required ($commits commits, $files files)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "major=false" >> "$GITHUB_OUTPUT"
+            echo "Routine upstream change: auto-accept after the green gate ($commits commits, $files files)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Report
         if: steps.check.outputs.nothing != 'true'
         env:
@@ -118,6 +138,7 @@ jobs:
           CONFLICT_COMMIT: ${{ steps.rebase.outputs.commit }}
           GATE_OK: ${{ steps.gate.outputs.ok }}
           GATE_FAILED: ${{ steps.gate.outputs.failed }}
+          MAJOR: ${{ steps.classify.outputs.major }}
         run: |
           upstream="$(git rev-parse --short upstream/main)"
           open_issue() {
@@ -148,6 +169,8 @@ jobs:
           git push --force origin "$SYNC"
           body="\`$BASE\` rebased onto upstream main \`$upstream\`: clean, and \`go build\` / \`go vet\` / \`go test\` green.
 
+          Review tier: **$([ "$MAJOR" = true ] && echo 'major — @danybgoode please review and accept' || echo 'routine — auto-accept after this run')**.
+
           **panfleto commits on top of upstream** (\`git log --oneline upstream/main..$SYNC\`):
           \`\`\`
           $(git log --oneline upstream/main.."$SYNC")
@@ -164,6 +187,21 @@ jobs:
           else
             gh pr create --head "$SYNC" --base "$BASE" --title "Upstream sync: rebase $BASE onto miniflux/v2 main ($upstream)" --body "$body"
           fi
+
+      - name: Auto-accept routine sync
+        if: steps.gate.outputs.ok == 'true' && steps.classify.outputs.major == 'false' && env.HAS_SYNC_TOKEN == 'true'
+        run: |
+          old="$(git rev-parse "$BASE")"
+          tag="pre-sync-$(date -u +%Y%m%d%H%M)"
+          git tag "$tag" "$old"
+          git push origin "$tag"
+          git push --force-with-lease="$BASE:$old" origin "$SYNC:refs/heads/$BASE"
+          pr="$(gh pr list --head "$SYNC" --base "$BASE" --state open --json number --jq '.[0].number')"
+          if [ -n "$pr" ]; then
+            gh pr comment "$pr" --body "Routine sync accepted automatically after build, vet and tests. Previous tip: \`$tag\`. The parent submodule pin still needs its green-image PR."
+            gh pr close "$pr" >/dev/null 2>&1 || true
+          fi
+          echo "Auto-accepted routine upstream sync. Previous tip: \`$tag\`." >> "$GITHUB_STEP_SUMMARY"
 
   accept:
     if: github.repository == 'danybgoode/panfleto-core' && inputs.accept
