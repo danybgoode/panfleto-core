@@ -1383,6 +1383,30 @@ func TestFetcherAllowPrivateNetworksOptionParsing(t *testing.T) {
 	}
 }
 
+func TestFetcherAllowPrivateFeedProxyOptionParsing(t *testing.T) {
+	configParser := NewConfigParser()
+
+	if configParser.options.FetcherAllowPrivateFeedProxy() {
+		t.Fatalf("Expected FETCHER_ALLOW_PRIVATE_FEED_PROXY to be disabled by default")
+	}
+
+	if err := configParser.parseLines([]string{"FETCHER_ALLOW_PRIVATE_FEED_PROXY=1"}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if !configParser.options.FetcherAllowPrivateFeedProxy() {
+		t.Fatalf("Expected FETCHER_ALLOW_PRIVATE_FEED_PROXY to be enabled")
+	}
+
+	if err := configParser.parseLines([]string{"FETCHER_ALLOW_PRIVATE_FEED_PROXY=0"}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if configParser.options.FetcherAllowPrivateFeedProxy() {
+		t.Fatalf("Expected FETCHER_ALLOW_PRIVATE_FEED_PROXY to be disabled")
+	}
+}
+
 func TestIntegrationAllowPrivateNetworksOptionParsing(t *testing.T) {
 	configParser := NewConfigParser()
 
@@ -1832,6 +1856,21 @@ func TestValidateDisableLocalAuthWithoutAlternative(t *testing.T) {
 	}
 	if err := configParser.options.Validate(); err == nil {
 		t.Fatal("Expected error when local auth is disabled without alternative")
+	}
+}
+
+func TestValidateDisableLocalAuthWithWebAuthn(t *testing.T) {
+	configParser := NewConfigParser()
+
+	if err := configParser.parseLines([]string{
+		"DISABLE_LOCAL_AUTH=1",
+		"WEBAUTHN=1",
+	}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if err := configParser.options.Validate(); err != nil {
+		t.Fatalf("Unexpected validation error: %v", err)
 	}
 }
 

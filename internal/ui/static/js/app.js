@@ -1200,7 +1200,7 @@ function initializeWebAuthn() {
     const loginButton = document.getElementById("webauthn-login");
     const usernameField = document.getElementById("form-username");
 
-    if (loginButton && usernameField) {
+    if (loginButton) {
         const abortController = new AbortController();
         loginButton.disabled = false;
 
@@ -1209,7 +1209,9 @@ function initializeWebAuthn() {
             webauthnHandler.login().catch(err => WebAuthnHandler.showErrorMessage(err));
         });
 
-        webauthnHandler.conditionalLogin(abortController).catch(err => WebAuthnHandler.showErrorMessage(err));
+        if (usernameField) {
+            webauthnHandler.conditionalLogin(abortController).catch(err => WebAuthnHandler.showErrorMessage(err));
+        }
     }
 }
 

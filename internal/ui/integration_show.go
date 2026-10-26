@@ -159,6 +159,10 @@ func (h *handler) renderIntegrationPage(w http.ResponseWriter, r *http.Request, 
 		PushoverDevice:                   integration.PushoverDevice,
 		PushoverPrefix:                   integration.PushoverPrefix,
 		ArchiveorgEnabled:                integration.ArchiveorgEnabled,
+		GotifyEnabled:                    integration.GotifyEnabled,
+		GotifyURL:                        integration.GotifyURL,
+		GotifyToken:                      integration.GotifyToken,
+		GotifyPriority:                   integration.GotifyPriority,
 	}
 
 	// --- PANFLETO MCP TOKEN ---
