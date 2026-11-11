@@ -13,7 +13,7 @@ require (
 	github.com/go-webauthn/webauthn v0.18.2
 	github.com/lib/pq v1.12.3
 	github.com/prometheus/client_golang v1.25.0
-	github.com/tdewolff/minify/v2 v2.24.24
+	github.com/tdewolff/minify/v2 v2.24.25
 	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.47.0
 	golang.org/x/net v0.62.0
