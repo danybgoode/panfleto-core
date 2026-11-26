@@ -39,19 +39,21 @@ func (f *funcMap) Map() template.FuncMap {
 		f.iconPaths[filename] = f.basePath + "/icon/" + bundle.Checksum + "/" + filename
 	}
 	return template.FuncMap{
-		"contains":         strings.Contains,
-		"csp":              csp,
-		"startsWith":       strings.HasPrefix,
-		"formatFileSize":   formatFileSize,
-		"dict":             dict,
-		"truncate":         truncate,
-		"isEmail":          isEmail,
-		"baseURL":          config.Opts.BaseURL,
-		"apiEnabled":       config.Opts.HasAPI,
-		"rootURL":          config.Opts.RootURL,
-		"disableLocalAuth": config.Opts.DisableLocalAuth,
-		"webAuthnEnabled":  config.Opts.WebAuthn,
-		"oidcProviderName": config.Opts.OAuth2OIDCProviderName,
+		"contains":           strings.Contains,
+		"csp":                csp,
+		"startsWith":         strings.HasPrefix,
+		"formatFileSize":     formatFileSize,
+		"dict":               dict,
+		"truncate":           truncate,
+		"isEmail":            isEmail,
+		"baseURL":            config.Opts.BaseURL,
+		"analyticsScriptURL": config.Opts.AnalyticsScriptURL,
+		"analyticsSite":      config.Opts.AnalyticsSite,
+		"apiEnabled":         config.Opts.HasAPI,
+		"rootURL":            config.Opts.RootURL,
+		"disableLocalAuth":   config.Opts.DisableLocalAuth,
+		"webAuthnEnabled":    config.Opts.WebAuthn,
+		"oidcProviderName":   config.Opts.OAuth2OIDCProviderName,
 		"hasOAuth2Provider": func(provider string) bool {
 			return config.Opts.OAuth2Provider() == provider
 		},
@@ -188,6 +190,12 @@ func csp(user *model.User, nonce string) string {
 		"style-src":                 "'nonce-" + nonce + "'",
 		"trusted-types":             "html url",
 		"connect-src":               "'self'",
+	}
+
+	// panfleto: first-party analytics posts its events to its own origin (empty = upstream CSP).
+	if config.Opts != nil && config.Opts.AnalyticsOrigin() != "" {
+		origin := config.Opts.AnalyticsOrigin()
+		policies["connect-src"] += " " + origin
 	}
 
 	if user != nil {
