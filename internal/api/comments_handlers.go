@@ -14,18 +14,18 @@ import (
 
 // CommentJSON represents a comment in JSON format for the API.
 type CommentJSON struct {
-	ID        int64      `json:"id"`
-	Author    string     `json:"author"`
-	CreatedAt time.Time  `json:"created_at"`
-	Body      string     `json:"text"`
+	ID        int64         `json:"id"`
+	Author    string        `json:"author"`
+	CreatedAt time.Time     `json:"created_at"`
+	Body      string        `json:"text"`
 	Children  []CommentJSON `json:"children,omitempty"`
 }
 
 // CommentsThreadJSON represents a comments thread in JSON format for the API.
 type CommentsThreadJSON struct {
-	CommentsURL string    `json:"comments_url"`
-	TotalCount  int       `json:"total_comments"`
-	Truncated   bool      `json:"truncated"`
+	CommentsURL string        `json:"comments_url"`
+	TotalCount  int           `json:"total_comments"`
+	Truncated   bool          `json:"truncated"`
 	Comments    []CommentJSON `json:"comments"`
 }
 
