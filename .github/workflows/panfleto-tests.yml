@@ -1,0 +1,30 @@
+# panfleto: CI for pull requests into the `panfleto` branch (production is built from it). Upstream's tests.yml and
+# linters.yml only run for PRs into `main`, so until 2026-11-26 panfleto PRs merged with no checks at all. A separate
+# file (not an edit to upstream's) keeps the weekly upstream sync free of conflicts.
+name: panfleto tests
+
+on:
+  pull_request:
+    branches: [panfleto]
+  push:
+    branches: [panfleto]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests, vet, gofmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))" || { gofmt -l $(git ls-files '*.go'); exit 1; }
+      - name: go vet
+        run: go vet ./...
+      - name: Unit tests (race)
+        run: make test

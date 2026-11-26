@@ -636,6 +636,19 @@ func NewConfigOptions() *configOptions {
 				rawValue:          "https://www.youtube-nocookie.com/embed/",
 				valueType:         stringType,
 			},
+			// panfleto: first-party analytics (tally, ~/dobby/tally). Empty = upstream behaviour: no script, and the
+			// CSP is untouched. When set, the layout loads it with the page nonce and connect-src gains its origin.
+			"ANALYTICS_SCRIPT_URL": {
+				parsedStringValue: "",
+				rawValue:          "",
+				valueType:         stringType,
+				validator:         validateAnalyticsScriptURL,
+			},
+			"ANALYTICS_SITE": {
+				parsedStringValue: "",
+				rawValue:          "",
+				valueType:         stringType,
+			},
 			// panfleto: article autofetch. Every default below is upstream Miniflux's behaviour, so the
 			// feature is off unless deploy/docker-compose.yml turns it on - and deploy/.env turns it off.
 			"FORCE_CRAWLER": {
@@ -1132,6 +1145,25 @@ func (c *configOptions) String() string {
 	}
 
 	return builder.String()
+}
+
+// panfleto: first-party analytics.
+
+func (c *configOptions) AnalyticsScriptURL() string {
+	return c.options["ANALYTICS_SCRIPT_URL"].parsedStringValue
+}
+
+func (c *configOptions) AnalyticsSite() string {
+	return c.options["ANALYTICS_SITE"].parsedStringValue
+}
+
+// AnalyticsOrigin is the script's scheme://host, added to connect-src so the tracker can send its events there.
+func (c *configOptions) AnalyticsOrigin() string {
+	u, err := url.Parse(c.AnalyticsScriptURL())
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // panfleto: article autofetch.

@@ -23,6 +23,10 @@
     {{ csp .user $cspNonce | safeHTML }}
     <link rel="stylesheet" nonce="{{ $cspNonce }}" type="text/css" href="{{ routePath "/stylesheets/%s/%s.css" .theme_checksum .theme }}">
     <script nonce="{{ $cspNonce }}" src="{{ routePath "/js/%s/%s.js" .app_js_checksum "app" }}" type="module"></script>
+    {{ if analyticsScriptURL -}}
+    {{/* panfleto: first-party analytics. data-coarse: no page titles, ids masked in paths (no reading history). */}}
+    <script nonce="{{ $cspNonce }}" defer src="{{ analyticsScriptURL }}" data-site="{{ analyticsSite }}" data-coarse="1"></script>
+    {{ end -}}
     {{ if .user -}}
         {{ if .user.Stylesheet -}}
         <style nonce="{{ $cspNonce }}">{{ .user.Stylesheet | safeCSS }}</style>

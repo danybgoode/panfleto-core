@@ -6,6 +6,7 @@ package config // import "miniflux.app/v2/internal/config"
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -56,6 +57,18 @@ func validateRange(rawValue string, min, max int) error {
 	}
 	if intValue < min || intValue > max {
 		return fmt.Errorf("value must be between %d and %d", min, max)
+	}
+	return nil
+}
+
+// panfleto: the analytics script must be an absolute https URL (it becomes a CSP connect-src origin).
+func validateAnalyticsScriptURL(rawValue string) error {
+	if rawValue == "" {
+		return nil
+	}
+	u, err := url.Parse(rawValue)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return fmt.Errorf("ANALYTICS_SCRIPT_URL must be an absolute https URL, got %q", rawValue)
 	}
 	return nil
 }
