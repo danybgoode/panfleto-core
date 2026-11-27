@@ -649,6 +649,14 @@ func NewConfigOptions() *configOptions {
 				rawValue:          "",
 				valueType:         stringType,
 			},
+			// panfleto: tally's members view (GET /tally/{summary|members|log}, bearer key). Empty = the route
+			// does not exist (404), which is upstream behaviour.
+			"TALLY_CONNECTOR_KEY": {
+				parsedStringValue: "",
+				rawValue:          "",
+				valueType:         stringType,
+				secret:            true,
+			},
 			// panfleto: article autofetch. Every default below is upstream Miniflux's behaviour, so the
 			// feature is off unless deploy/docker-compose.yml turns it on - and deploy/.env turns it off.
 			"FORCE_CRAWLER": {
@@ -1155,6 +1163,10 @@ func (c *configOptions) AnalyticsScriptURL() string {
 
 func (c *configOptions) AnalyticsSite() string {
 	return c.options["ANALYTICS_SITE"].parsedStringValue
+}
+
+func (c *configOptions) TallyConnectorKey() string {
+	return c.options["TALLY_CONNECTOR_KEY"].parsedStringValue
 }
 
 // AnalyticsOrigin is the script's scheme://host, added to connect-src so the tracker can send its events there.

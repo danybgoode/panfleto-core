@@ -42,6 +42,11 @@ func newRouter(store *storage.Storage, pool *worker.Pool) http.Handler {
 		appMux.Handle("GET /metrics", metricsHandler())
 	}
 
+	// panfleto: tally's members view, only when TALLY_CONNECTOR_KEY is set.
+	if config.Opts.TallyConnectorKey() != "" {
+		appMux.Handle("GET /tally/{what}", tallyHandler(store))
+	}
+
 	// UI routing (catch-all).
 	appMux.Handle("/", ui.Serve(store, pool))
 
